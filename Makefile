@@ -3,20 +3,21 @@ SHELL := /bin/bash
 .ONESHELL:
 
 DIRECTORY := $(shell pwd)
-FORMATTER := "table"
-TIMEOUT := "10"
+# Defaults (can be overridden from environment or `make VAR=value`)
+FORMATTER ?= table
+TIMEOUT ?= 10
+OUTPUT_FILE ?=
 
 .PHONY: all
 all: benchmark
 
 .PHONY: benchmark
 benchmark: check-env
-	@REALPATH=$$(cd "$${DIRECTORY}" && pwd); \
-	ARGS=("-d $${REALPATH}" "-f $(FORMATTER)"); \
-	[ ! -z $${OUTPUT_FILE} ] && ARGS+=( "-o $${OUTPUT_FILE}" ); \
-	[ ! -z $${UNCONFINED} ] && ARGS+=( "--unconfined" ); \
-	[ ! -z $${TIMEOUT} ] && ARGS+=( "-t $${TIMEOUT}" ); \
-	cd ./tools; npm ci --silent && npm start --silent -- benchmark $${ARGS[@]}
+	@ARGS=("-d" "$(DIRECTORY)" "-f" "$(FORMATTER)"); \
+	if [ -n "$(OUTPUT_FILE)" ]; then ARGS+=("-o" "$(OUTPUT_FILE)"); fi; \
+	if [ ! -z "$$UNCONFINED" ]; then ARGS+=("--unconfined"); fi; \
+	if [ -n "$(TIMEOUT)" ]; then ARGS+=("-t" "$(TIMEOUT)"); fi; \
+	cd ./tools && npm ci --silent && npm start --silent -- benchmark "$${ARGS[@]}"
 
 .PHONY: check-env
 check-env: check-cc-works check-docker-works check-node-works
@@ -31,5 +32,5 @@ check-node-works:
 
 .PHONY: check-docker-works
 check-docker-works:
-	@docker --version >/dev/null 2>&1 || (echo 'Please install docker. See https://github.com/PlummersSoftwareLLC/Primes/blob/drag-race/BENCHMARK.md for more information.' && exit 1)
-	@docker ps >/dev/null
+	@docker --version >/dev/null 2>&1 || (echo 'Please install Docker (https://docs.docker.com/get-docker/). See BENCHMARK.md for details.' && exit 1)
+	@docker ps >/dev/null 2>&1 || (echo 'Docker does not appear to be running or you lack permission to run docker commands. Try starting the Docker daemon or run `sudo docker ps`.' && exit 1)
